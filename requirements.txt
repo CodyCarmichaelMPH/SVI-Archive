@@ -2,3 +2,4 @@ Flask
 google-cloud-storage
 google-auth
 gunicorn
+json
