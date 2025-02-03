@@ -1,13 +1,22 @@
 from flask import Flask, render_template, request, send_from_directory, jsonify, redirect
-from google.cloud import storage
 import os
 import json
+from google.cloud import storage
+from google.oauth2 import service_account
 
 app = Flask(__name__)
 
-client = storage.Client.from_service_account_json(os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
-bucket = client.bucket('svi-preservation-data')
 
+# Load credentials from environment variable
+credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+if not credentials_json:
+    raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.")
+
+credentials = service_account.Credentials.from_service_account_info(json.loads(credentials_json))
+
+# Authenticate with Google Cloud
+client = storage.Client(credentials=credentials)
+bucket = client.bucket('svi-preservation-data')
 
 # Route to serve the main index.html
 @app.route('/')
