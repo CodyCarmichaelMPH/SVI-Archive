@@ -1,11 +1,10 @@
-from flask import Flask, render_template, request, send_from_directory, jsonify, redirect
+from flask import Flask, render_template, request, send_from_directory, jsonify
 import os
 import json
 from google.cloud import storage
 from google.oauth2 import service_account
 
 app = Flask(__name__)
-
 
 # Use the file path from the environment variable
 credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
@@ -26,12 +25,6 @@ def index():
 @app.route('/files.json')
 def get_files_json():
     return send_from_directory('.', 'files.json')
-
-# Serve CSV and ESRI Data locally
-@app.route('/data/<path:filename>')
-def download_data(filename):
-    directory = os.path.dirname(filename)
-    return send_from_directory(directory or '.', os.path.basename(filename), as_attachment=True)
 
 # API to filter files based on query parameters
 @app.route('/filter', methods=['GET'])
@@ -55,7 +48,7 @@ def filter_files():
     return jsonify(filtered_files)
 
 # Download file handler
-@app.route('/download/<path:filename>')
+@app.route('/download/<path:filename>', methods=['GET'])
 def download_file(filename):
     with open('files.json') as f:
         files_data = json.load(f)
@@ -63,19 +56,17 @@ def download_file(filename):
     file_info = next((file for file in files_data if file['fileName'] == filename), None)
 
     if file_info:
-        # If Google Cloud URL exists, fetch it securely using the API Key
-        if 'gcsUrl' in file_info:
-            blob = bucket.blob(file_info['localPath'])
-            signed_url = blob.generate_signed_url(
-                version='v4',
-                expiration=3600,  # 1-hour expiry
-                query_parameters={'key': api_key}
-            )
-            return jsonify({"gcsUrl": signed_url})
-        else:
-            return send_from_directory('.', file_info['localPath'], as_attachment=True)
-    else:
-        return jsonify({"error": "File not found."}), 404
+        gcs_path = file_info.get('localPath')
+        if not gcs_path:
+            return jsonify({"error": "Invalid file path."}), 404
+
+        # Generate a signed URL for secure download
+        blob = bucket.blob(gcs_path)
+        signed_url = blob.generate_signed_url(version='v4', expiration=3600)  # 1-hour expiry
+
+        return jsonify({"downloadUrl": signed_url})
+
+    return jsonify({"error": "File not found."}), 404
 
 # Custom error handler for 404 errors
 @app.errorhandler(404)
@@ -83,9 +74,7 @@ def page_not_found(e):
     return "404 - File Not Found", 404
 
 if __name__ == '__main__':
-    import os
-
-    # Use the port provided by Render, default to 10000 if not set
+    # Use the port provided by Render, default to 4000 if not set
     port = int(os.environ.get("PORT", 4000))
 
     # Bind to 0.0.0.0 so Render can detect the open port
