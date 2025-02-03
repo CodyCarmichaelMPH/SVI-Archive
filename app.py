@@ -83,4 +83,10 @@ def page_not_found(e):
     return "404 - File Not Found", 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+
+    # Use the port provided by Render, default to 10000 if not set
+    port = int(os.environ.get("PORT", 10000))
+
+    # Bind to 0.0.0.0 so Render can detect the open port
+    app.run(host='0.0.0.0', port=port, debug=True)
