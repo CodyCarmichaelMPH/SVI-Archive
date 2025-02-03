@@ -1,8 +1,14 @@
-from flask import Flask, render_template, request, send_from_directory, jsonify
+from flask import Flask, render_template, request, send_from_directory, jsonify, redirect
+from google.cloud import storage
 import os
 import json
 
 app = Flask(__name__)
+
+# Authenticate with Google Cloud using the service account key
+client = storage.Client.from_service_account_json('key.json')
+bucket_name = 'svi-preservation-data'
+bucket = client.bucket(bucket_name)
 
 # Route to serve the main index.html
 @app.route('/')
@@ -14,7 +20,7 @@ def index():
 def get_files_json():
     return send_from_directory('.', 'files.json')
 
-# Serve CSV and ESRI Data
+# Serve CSV and ESRI Data locally
 @app.route('/data/<path:filename>')
 def download_data(filename):
     directory = os.path.dirname(filename)
@@ -40,6 +46,25 @@ def filter_files():
     ]
 
     return jsonify(filtered_files)
+
+# Download file handler
+@app.route('/download/<path:filename>')
+def download_file(filename):
+    with open('files.json') as f:
+        files_data = json.load(f)
+
+    file_info = next((file for file in files_data if file['fileName'] == filename), None)
+
+    if file_info:
+        # If Google Cloud URL exists, fetch it securely using the key.json
+        if 'gcsUrl' in file_info:
+            blob = bucket.blob(file_info['localPath'])
+            signed_url = blob.generate_signed_url(version='v4', expiration=3600)  # 1-hour expiry
+            return jsonify({"gcsUrl": signed_url})
+        else:
+            return send_from_directory('.', file_info['localPath'], as_attachment=True)
+    else:
+        return jsonify({"error": "File not found."}), 404
 
 # Custom error handler for 404 errors
 @app.errorhandler(404)
