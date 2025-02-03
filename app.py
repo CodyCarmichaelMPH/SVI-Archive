@@ -7,15 +7,14 @@ from google.oauth2 import service_account
 app = Flask(__name__)
 
 
-# Load credentials from environment variable
-credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-if not credentials_json:
+# Use the file path from the environment variable
+credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+
+if not credentials_path:
     raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.")
 
-credentials = service_account.Credentials.from_service_account_info(json.loads(credentials_json))
-
-# Authenticate with Google Cloud
-client = storage.Client(credentials=credentials)
+# Authenticate using the service account key file
+client = storage.Client.from_service_account_json(credentials_path)
 bucket = client.bucket('svi-preservation-data')
 
 # Route to serve the main index.html
