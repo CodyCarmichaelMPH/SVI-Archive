@@ -60,18 +60,19 @@ def download_file(filename):
         if not gcs_path:
             return jsonify({"error": "Invalid file path."}), 404
 
-        # Generate signed URL with proper content type
+        # Generate signed URL with proper headers
         blob = bucket.blob(gcs_path)
         signed_url = blob.generate_signed_url(
             version='v4',
-            expiration=3600,
+            expiration=3600,  # 1-hour expiry
             response_disposition=f'attachment; filename="{file_info["fileName"]}"',
-            response_content_type='text/csv' if filename.endswith('.csv') else 'application/zip'
+            response_type='text/csv' if filename.endswith('.csv') else 'application/zip'
         )
 
         return jsonify({"downloadUrl": signed_url})
 
     return jsonify({"error": "File not found."}), 404
+
 
 
 # Custom error handler for 404 errors
