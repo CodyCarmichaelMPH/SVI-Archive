@@ -5,8 +5,11 @@ import json
 
 app = Flask(__name__)
 
-# Authenticate with Google Cloud using the service account key
-client = storage.Client.from_service_account_json('key.json')
+# Authenticate with Google Cloud using the API Key
+api_key = os.getenv('GOOGLE_API_KEY')
+
+# Initialize Google Cloud Storage client with the API Key
+client = storage.Client(credentials=None, project='svi-preservation-project')
 bucket_name = 'svi-preservation-data'
 bucket = client.bucket(bucket_name)
 
@@ -56,10 +59,14 @@ def download_file(filename):
     file_info = next((file for file in files_data if file['fileName'] == filename), None)
 
     if file_info:
-        # If Google Cloud URL exists, fetch it securely using the key.json
+        # If Google Cloud URL exists, fetch it securely using the API Key
         if 'gcsUrl' in file_info:
             blob = bucket.blob(file_info['localPath'])
-            signed_url = blob.generate_signed_url(version='v4', expiration=3600)  # 1-hour expiry
+            signed_url = blob.generate_signed_url(
+                version='v4',
+                expiration=3600,  # 1-hour expiry
+                query_parameters={'key': api_key}
+            )
             return jsonify({"gcsUrl": signed_url})
         else:
             return send_from_directory('.', file_info['localPath'], as_attachment=True)
