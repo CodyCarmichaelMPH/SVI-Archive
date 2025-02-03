@@ -190,23 +190,30 @@
                     <td>${file.location}</td>
                     <td>${file.geography}</td>
                     <td>${file.type}</td>
-                    <td><button onclick="downloadFile('${file.path}')">Download</button></td>
+                    <td><button onclick="downloadFile('${file.fileName}')">Download</button></td>
                 </tr>`;
                 table.innerHTML += row;
             });
         }
 
-        function downloadFile(path) {
+        function downloadFile(fileName) {
             const spinner = document.getElementById('spinner');
             spinner.style.display = 'block';
 
-            setTimeout(() => {
-                spinner.style.display = 'none';
-                const link = document.createElement('a');
-                link.href = `/data/${path}`;
-                link.download = path.split('/').pop();
-                link.click();
-            }, 1000);
+            fetch(`/download/${encodeURIComponent(fileName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    spinner.style.display = 'none';
+                    if (data.downloadUrl) {
+                        window.open(data.downloadUrl, '_blank');
+                    } else {
+                        alert('Error: File could not be downloaded.');
+                    }
+                })
+                .catch(error => {
+                    spinner.style.display = 'none';
+                    console.error('Download error:', error);
+                });
         }
     </script>
 </body>
