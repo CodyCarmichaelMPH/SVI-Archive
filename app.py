@@ -5,13 +5,9 @@ import json
 
 app = Flask(__name__)
 
-# Authenticate with Google Cloud using the API Key
-api_key = os.getenv('GOOGLE_API_KEY')
+client = storage.Client.from_service_account_json(os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
+bucket = client.bucket('svi-preservation-data')
 
-# Initialize Google Cloud Storage client with the API Key
-client = storage.Client(credentials=None, project='svi-preservation-project')
-bucket_name = 'svi-preservation-data'
-bucket = client.bucket(bucket_name)
 
 # Route to serve the main index.html
 @app.route('/')
