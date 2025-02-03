@@ -86,7 +86,7 @@ if __name__ == '__main__':
     import os
 
     # Use the port provided by Render, default to 10000 if not set
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 4000))
 
     # Bind to 0.0.0.0 so Render can detect the open port
     app.run(host='0.0.0.0', port=port, debug=True)
