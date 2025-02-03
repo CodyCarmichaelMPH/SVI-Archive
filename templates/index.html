@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broadly Epi's Social Vulnerability Index Archive and Data Mart</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f9fafb;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #005b96;
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filters div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #333;
+        }
+
+        button {
+            background-color: #007acc;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #005b96;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 15px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e1eff6;
+            color: #005b96;
+        }
+
+        .spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #007acc;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Broadly Epi's Social Vulnerability Index Archive and Data Mart</h1>
+
+    <div class="filters">
+        <div>
+            <label for="yearSelect">Year:</label>
+            <select id="yearSelect"></select>
+        </div>
+        <div>
+            <label for="locationSelect">Location:</label>
+            <select id="locationSelect"></select>
+        </div>
+        <div>
+            <label for="geographySelect">Geography:</label>
+            <select id="geographySelect"></select>
+        </div>
+        <div>
+            <label for="fileTypeSelect">File Type:</label>
+            <select id="fileTypeSelect"></select>
+        </div>
+        <button onclick="filterFiles()">Filter</button>
+    </div>
+
+    <div class="spinner" id="spinner"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Year</th>
+                <th>Location</th>
+                <th>Geography</th>
+                <th>File Type</th>
+                <th>Download</th>
+            </tr>
+        </thead>
+        <tbody id="filesTable"></tbody>
+    </table>
+
+    <script>
+        let files = [];
+
+        // Load metadata
+        fetch('files.json')
+            .then(response => response.json())
+            .then(data => {
+                files = data;
+                populateFilters(data);
+                displayFiles(data);
+            });
+
+        function populateFilters(data) {
+            const years = [...new Set(data.map(file => file.year))].filter(Boolean);
+            const locations = [...new Set(data.map(file => file.location))].filter(Boolean);
+            const geographies = [...new Set(data.map(file => file.geography))].filter(Boolean);
+            const fileTypes = [...new Set(data.map(file => file.type))].filter(Boolean);
+
+            populateSelect('yearSelect', years);
+            populateSelect('locationSelect', locations);
+            populateSelect('geographySelect', geographies);
+            populateSelect('fileTypeSelect', fileTypes);
+        }
+
+        function populateSelect(id, options) {
+            const select = document.getElementById(id);
+            select.innerHTML = `<option value="">All</option>` + options.map(option => `<option value="${option}">${option}</option>`).join('');
+        }
+
+        function filterFiles() {
+            const year = document.getElementById('yearSelect').value;
+            const location = document.getElementById('locationSelect').value;
+            const geography = document.getElementById('geographySelect').value;
+            const fileType = document.getElementById('fileTypeSelect').value;
+
+            const filtered = files.filter(file => {
+                return (year === '' || file.year === year) &&
+                       (location === '' || file.location === location) &&
+                       (geography === '' || file.geography === geography) &&
+                       (fileType === '' || file.type === fileType);
+            });
+
+            displayFiles(filtered);
+        }
+
+        function displayFiles(data) {
+            const table = document.getElementById('filesTable');
+            table.innerHTML = '';
+
+            data.forEach(file => {
+                const row = `<tr>
+                    <td>${file.fileName}</td>
+                    <td>${file.year}</td>
+                    <td>${file.location}</td>
+                    <td>${file.geography}</td>
+                    <td>${file.type}</td>
+                    <td><button onclick="downloadFile('${file.path}')">Download</button></td>
+                </tr>`;
+                table.innerHTML += row;
+            });
+        }
+
+        function downloadFile(path) {
+            const spinner = document.getElementById('spinner');
+            spinner.style.display = 'block';
+
+            setTimeout(() => {
+                spinner.style.display = 'none';
+                const link = document.createElement('a');
+                link.href = `/data/${path}`;
+                link.download = path.split('/').pop();
+                link.click();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
